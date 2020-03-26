@@ -10,7 +10,7 @@ This is a simple tool to help analyze the output of PHP profiling extension [xhp
 ## Installation
 
 ```sh
-npm install xhprof-analyzer --save
+npm install xhprof-analyzer -g
 ```
 
 ## Usage
