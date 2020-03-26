@@ -1,9 +1,9 @@
 # XHProf Analyzer
 
 [![npm version](https://img.shields.io/npm/v/xhprof-analyzer.svg?colorB=brightgreen)](https://www.npmjs.com/package/xhprof-analyzer "Stable Version")
-[![License](https://img.shields.io/npm/l/xhprof-analyzer.svg?maxAge=2592000?style=plastic)](https://github.com/litert/core/blob/master/LICENSE)
-[![GitHub issues](https://img.shields.io/github/issues/litert/core.js.svg)](https://github.com/litert/core.js/issues)
-[![GitHub Releases](https://img.shields.io/github/release/litert/core.js.svg)](https://github.com/litert/core.js/releases "Stable Release")
+[![License](https://img.shields.io/npm/l/xhprof-analyzer.svg?maxAge=2592000?style=plastic)](https://github.com/fenying/xhprof-analyzer/blob/master/LICENSE)
+[![GitHub issues](https://img.shields.io/github/issues/fenying/xhprof-analyzer.js.svg)](https://github.com/fenying/xhprof-analyzer.js/issues)
+[![GitHub Releases](https://img.shields.io/github/release/fenying/xhprof-analyzer.js.svg)](https://github.com/fenying/xhprof-analyzer.js/releases "Stable Release")
 
 This is a simple tool to help analyze the output of PHP profiling extension [xhprof](https://github.com/tideways/php-xhprof-extension).
 
