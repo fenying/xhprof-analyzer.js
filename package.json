@@ -1,0 +1,46 @@
+{
+  "name": "xhprof-analyzer",
+  "version": "0.1.0",
+  "description": "A simple tool to analyze the output of xhprof.",
+  "main": "lib/index.js",
+  "scripts": {
+    "prepare": "npm run rebuild",
+    "build": "echo Using TypeScript && tsc -v && tsc -p .",
+    "build-watch": "echo Using TypeScript && tsc -v && tsc -w -p .",
+    "rebuild": "npm run clean && npm run lint && npm run build",
+    "test": "echo See directory src/examples",
+    "clean": "rm -rf lib examples",
+    "lint": "eslint --ext ts src"
+  },
+  "bin": {
+    "xhprof-analyze": "./lib/CLI.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fenying/xhprof-analyzer.js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/fenying/xhprof-analyzer.js/issues"
+  },
+  "homepage": "https://github.com/fenying/xhprof-analyzer.js#readme",
+  "keywords": [
+    "litert",
+    "lrt",
+    "core"
+  ],
+  "author": "Angus.Fenying <fenying@litert.org> (https://fenying.net)",
+  "license": "Apache-2.0",
+  "typings": "lib/index.d.ts",
+  "types": "lib/index.d.ts",
+  "devDependencies": {
+    "@types/node": "^12.12.31",
+    "@typescript-eslint/eslint-plugin": "^2.21.0",
+    "@typescript-eslint/parser": "^2.21.0",
+    "eslint": "^6.8.0",
+    "typescript": "^3.2.2"
+  },
+  "dependencies": {
+    "@litert/clap": "^1.0.1",
+    "@litert/typeguard": "^1.0.1"
+  }
+}
