@@ -40,7 +40,7 @@ register_shutdown_function(function() use ($startTime) {
 and then run this CLI from shell:
 
 ```sh
-xhprof-analyze --top-
+xhprof-analyze --top-avg-time-path-list /var/log/php-profile.log
 ```
 
 > For more details list, see `xhprof-analyze --help`.
