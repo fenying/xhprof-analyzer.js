@@ -15,7 +15,10 @@
                 "${workspaceFolder}/lib/*.js",
                 "${workspaceFolder}/examples/*.js"
             ],
-            "args": ["tests/demo.log"]
+            "args": [
+                "--top-time-request-list",
+                "tests/php-profile.log"
+            ]
         }
     ]
 }

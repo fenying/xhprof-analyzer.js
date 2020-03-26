@@ -20,8 +20,8 @@ import { XHProfAnalyzer } from './Analyzer';
 import * as C from './Common';
 
 const INDEX_WIDTH = 8;
-const AVG_TIME_WIDTH = 10;
-const TIME_WIDTH = 12;
+const AVG_TIME_WIDTH = 16;
+const TIME_WIDTH = 16;
 const TIME_PERCENT_WIDTH = 8;
 const COUNT_WIDTH = 8;
 const COUNT_PERCENT_WIDTH = 8;
@@ -67,6 +67,10 @@ class CLI {
         }).addOption({
             name: 'top-avg-time-request-list',
             description: 'Display the longest average time called request list.',
+            arguments: 0,
+        }).addOption({
+            name: 'all-list',
+            description: 'Display all list.',
             arguments: 0,
         });
 
@@ -116,38 +120,39 @@ class CLI {
 
         const rows = parseInt(clap.options['max-rows']?.[0] ?? '100');
 
-        if (clap.flags['top-call-path-list']) {
+        if (clap.flags['all-list'] || clap.flags['top-call-path-list']) {
 
             this._listTopCalledPath(result, rows);
         }
 
-        if (clap.flags['top-avg-time-path-list']) {
+        if (clap.flags['all-list'] || clap.flags['top-avg-time-path-list']) {
 
             this._listTopAvgTimePath(result, rows);
         }
 
-        if (clap.flags['top-time-path-list']) {
+        if (clap.flags['all-list'] || clap.flags['top-time-path-list']) {
 
             this._listTopTimePath(result, rows);
         }
 
-        if (clap.flags['top-call-request-list']) {
+        if (clap.flags['all-list'] || clap.flags['top-call-request-list']) {
 
             this._listTopCalledRequest(result, rows);
         }
 
-        if (clap.flags['top-avg-time-request-list']) {
+        if (clap.flags['all-list'] || clap.flags['top-avg-time-request-list']) {
 
             this._listTopAvgTimeRequest(result, rows);
         }
 
-        if (clap.flags['top-time-request-list']) {
+        if (clap.flags['all-list'] || clap.flags['top-time-request-list']) {
 
             this._listTopTimeRequest(result, rows);
         }
 
         console.log(`Total Execution Time: ${(result.totalTime * 1000000).toFixed(3)}μs`);
         console.log(`Total Function Calls: ${result.totalCalls}`);
+        console.log(`Total Request Calls: ${result.totalRequests}`);
     }
 
     protected _listTopCalledPath(rs: C.IAnalyzeResult, rows: number): void {
@@ -199,7 +204,7 @@ class CLI {
         this._printRequestListHeader(`top ${rows} longest average time requests`);
 
         this._printRequestList(
-            rs.requests.sort((a, b) => b.avgTime - a.avgTime),
+            rs.requests.sort((a, b) => a.avgTime > b.avgTime ? -1 : 1),
             rs,
             rows
         );
@@ -259,7 +264,7 @@ class CLI {
             }${
                 this._column(TIME_PERCENT_WIDTH, Math.floor(r.totalTime / rs.totalTime * 10000) / 100)
             }${
-                this._column(AVG_TIME_WIDTH, Math.floor(r.avgTime / r.count * 100) / 100)
+                this._column(AVG_TIME_WIDTH, Math.floor(r.avgTime * 100000000) / 100)
             }${
                 this._column(R_MAX_TIME_WIDTH, Math.floor(r.maxTime * 100000000) / 100)
             }${

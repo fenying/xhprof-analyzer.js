@@ -57,20 +57,19 @@ export class XHProfAnalyzer implements C.IAnalyzer {
 
         let fp = $FS.openSync(file, 'r');
 
-        let tmp = Buffer.allocUnsafe(READ_SEGMENT);
-
         let fSize = $FS.statSync(file).size;
 
+        let ln = 1;
+
         while (1) {
+
+            let tmp = Buffer.allocUnsafe(READ_SEGMENT);
 
             const readBytes = $FS.readSync(fp, tmp, 0, tmp.length, offset);
 
             offset += readBytes;
 
-            if (readBytes === 0) {
-
-                break;
-            }
+            tmp = tmp.slice(0, readBytes);
 
             while (1) {
 
@@ -93,15 +92,51 @@ export class XHProfAnalyzer implements C.IAnalyzer {
 
                     bufferedBytes += pos;
 
-                    let rowData = JSON.parse(buf.slice(0, bufferedBytes).toString());
+                    try {
 
-                    if (isXHProfOutput(rowData)) {
+                        let rowData = JSON.parse(buf.slice(0, bufferedBytes).toString());
 
-                        this._requests.push(rowData);
+                        if (isXHProfOutput(rowData)) {
+
+                            this._requests.push(rowData);
+                        }
+                        bufferedBytes = 0;
+
+                        tmp = tmp.slice(pos + 1);
                     }
-                    bufferedBytes = 0;
+                    catch (e) {
 
-                    tmp = tmp.slice(pos + 1);
+                        const nPos = buf.indexOf('{"data":{', 4);
+
+                        if (nPos !== -1) {
+
+                            try {
+
+                                let rowData = JSON.parse(buf.slice(nPos, bufferedBytes).toString());
+
+                                if (isXHProfOutput(rowData)) {
+
+                                    this._requests.push(rowData);
+                                }
+
+                                console.warn(`[FIXED] Bad log in line ${ln}: ${e.toString()}`);
+                            }
+                            catch (e) {
+
+                                console.warn(`[IGNORED] Bad log in line ${ln}: ${e.toString()}`);
+                            }
+                        }
+                        else {
+
+                            console.warn(`[IGNORED] Bad log in line ${ln}: ${e.toString()}`);
+                        }
+
+                        bufferedBytes = 0;
+
+                        tmp = tmp.slice(pos + 1);
+                    }
+
+                    ln++;
                 }
                 else {
 
@@ -168,7 +203,6 @@ export class XHProfAnalyzer implements C.IAnalyzer {
             }
             else {
 
-                req.count++;
                 if (rawReq.totalTime > req.maxTime) {
 
                     req.maxTime = rawReq.totalTime;
@@ -177,8 +211,9 @@ export class XHProfAnalyzer implements C.IAnalyzer {
 
                     req.minTime = rawReq.totalTime;
                 }
+                req.count++;
                 req.totalTime += rawReq.totalTime;
-                req.avgTime = Math.floor(req.totalTime / req.count);
+                req.avgTime = req.totalTime / req.count;
             }
 
             result.totalTime += rawReq.totalTime;
