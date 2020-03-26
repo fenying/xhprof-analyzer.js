@@ -32,7 +32,8 @@ register_shutdown_function(function() use ($startTime) {
             'data' => tideways_xhprof_disable(),
             'totalTime' => microtime(true) - $startTime,
             'request' => $_SERVER['REQUEST_URI']
-        ]) . PHP_EOL
+        ]) . PHP_EOL,
+        FILE_APPEND
     );
 });
 ```
