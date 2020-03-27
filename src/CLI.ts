@@ -57,6 +57,10 @@ class CLI {
             description: 'Display the longest average time called path list.',
             arguments: 0,
         }).addOption({
+            name: 'top-referred-path-list',
+            description: 'Display the most requests referred path list.',
+            arguments: 0,
+        }).addOption({
             name: 'top-called-request-list',
             description: 'Display the most frequently called request list.',
             arguments: 0,
@@ -135,6 +139,11 @@ class CLI {
             this._listTopTimePath(result, rows);
         }
 
+        if (clap.flags['all-list'] || clap.flags['top-referred-path-list']) {
+
+            this._listTopReferredPath(result, rows);
+        }
+
         if (clap.flags['all-list'] || clap.flags['top-call-request-list']) {
 
             this._listTopCalledRequest(result, rows);
@@ -183,6 +192,17 @@ class CLI {
 
         this._printCallList(
             rs.calls.sort((a, b) => b.wallTime - a.wallTime),
+            rs,
+            rows
+        );
+    }
+
+    protected _listTopReferredPath(rs: C.IAnalyzeResult, rows: number): void {
+
+        this._printPathListHeader(`top ${rows} most requests referred paths`);
+
+        this._printCallList(
+            rs.calls.sort((a, b) => b.requestCoverage - a.requestCoverage),
             rs,
             rows
         );

@@ -1,6 +1,6 @@
 {
   "name": "xhprof-analyzer",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A simple tool to analyze the output of xhprof.",
   "main": "lib/index.js",
   "scripts": {
