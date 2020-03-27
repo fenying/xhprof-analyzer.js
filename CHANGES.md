@@ -1,5 +1,9 @@
 # Changes Logs
 
+## v0.1.3
+
+- Improved the list output with multi-level sorting.
+
 ## v0.1.2
 
 - Added top refered list of paths.

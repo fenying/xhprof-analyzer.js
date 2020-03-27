@@ -169,7 +169,7 @@ class CLI {
         this._printPathListHeader(`top ${rows} most frequently called paths`);
 
         this._printCallList(
-            rs.calls.sort((a, b) => b.calledTimes - a.calledTimes),
+            rs.calls.sort((a, b) => (b.calledTimes - a.calledTimes) || (b.wallTime - a.wallTime)),
             rs,
             rows
         );
@@ -202,7 +202,7 @@ class CLI {
         this._printPathListHeader(`top ${rows} most requests referred paths`);
 
         this._printCallList(
-            rs.calls.sort((a, b) => b.requestCoverage - a.requestCoverage),
+            rs.calls.sort((a, b) => (b.requestCoverage - a.requestCoverage) || (b.calledTimes - a.calledTimes) || (b.wallTime - a.wallTime)),
             rs,
             rows
         );
@@ -213,7 +213,7 @@ class CLI {
         this._printRequestListHeader(`top ${rows} most frequently called requests`);
 
         this._printRequestList(
-            rs.requests.sort((a, b) => b.count - a.count),
+            rs.requests.sort((a, b) => (b.count - a.count) || (b.totalTime - a.totalTime)),
             rs,
             rows
         );
