@@ -13,7 +13,7 @@
     "lint": "eslint --ext ts src"
   },
   "bin": {
-    "xhprof-analyze": "./lib/CLI.js"
+    "xhprof-analyze": "./lib/exe.js"
   },
   "repository": {
     "type": "git",
@@ -24,9 +24,9 @@
   },
   "homepage": "https://github.com/fenying/xhprof-analyzer.js#readme",
   "keywords": [
-    "litert",
-    "lrt",
-    "core"
+    "php",
+    "profile",
+    "xhprof"
   ],
   "author": "Angus.Fenying <fenying@litert.org> (https://fenying.net)",
   "license": "Apache-2.0",
