@@ -3,6 +3,7 @@
 ## v0.2.0
 
 - Added customized list supports.
+- Added more columns supports.
 
 ## v0.1.3
 
