@@ -18,19 +18,176 @@
 import * as $CLAP from '@litert/clap';
 import { XHProfAnalyzer } from './Analyzer';
 import * as C from './Common';
+import * as TyG from '@litert/typeguard';
 
-const INDEX_WIDTH = 8;
-const AVG_TIME_WIDTH = 16;
-const TIME_WIDTH = 16;
-const TIME_PERCENT_WIDTH = 8;
-const COUNT_WIDTH = 8;
-const COUNT_PERCENT_WIDTH = 8;
+type TColumnApply<T> = Record<
+    'index' | 'count' | 'count%' | 'time' | 'time%' |
+    'avg-time' | 'avg-call' | 'max-time' | 'min-time' |
+    'max-call' | 'min-call' | 'call-coverage' | 'called-requests' |
+    'path',
+    T
+>;
 
-const P_REQUESTS_WIDTH = 10;
-const R_MAX_TIME_WIDTH = TIME_WIDTH;
-const R_MIN_TIME_WIDTH = TIME_WIDTH;
+interface IColumnConfig {
+    name: string;
+    width: number;
+    nonSortable?: boolean;
+    allow: Array<ICustomListOptions['type']>;
+    outExpr(v: string, rs: string, type: ICustomListOptions['type']): string;
+    expr(v: string, rs: string, type: ICustomListOptions['type']): string;
+}
+
+type IListFunction = (rs: C.IAnalyzeResult) => void;
+
+const COLUMN_INFO: TColumnApply<IColumnConfig> = {
+
+    'index': {
+        'name': '#',
+        'width': 8,
+        'allow': ['path', 'request'],
+        'nonSortable': false,
+        'outExpr': () => 'i++',
+        'expr': () => 'i++',
+    },
+    'count': {
+        'name': 'Count',
+        'width': 12,
+        'allow': ['path', 'request'],
+        'outExpr': (v, rs, t) => t === 'path' ? `${v}.totalCalledTimes` : `${v}.count`,
+        'expr': (v, rs, t) => t === 'path' ? `${v}.totalCalledTimes` : `${v}.count`,
+    },
+    'count%': {
+        'name': 'Count%',
+        'width': 8,
+        'allow': ['path', 'request'],
+        'outExpr': (v, rs, t) => `(Math.floor(${
+            t === 'path' ? `${v}.totalCalledTimes` : `${v}.count`
+        } / ${rs}.totalCalls * 10000) / 100).toFixed(2)`,
+        'expr': (v, rs, t) => `${
+            t === 'path' ? `${v}.totalCalledTimes` : `${v}.count`
+        } / ${rs}.totalCalls`,
+    },
+    'time': {
+        'name': 'Time',
+        'width': 16,
+        'allow': ['path', 'request'],
+        'outExpr': (v, rs, t) => t === 'path' ? `${v}.totalTime` : `(${v}.totalTime * 1e6).toFixed(2)`,
+        'expr': (v, rs, t) => t === 'path' ? `${v}.totalTime` : `${v}.totalTime * 1e6`,
+    },
+    'time%': {
+        'name': 'Time%',
+        'width': 8,
+        'allow': ['path', 'request'],
+        'outExpr': (v, rs, t) => t === 'path' ?
+            `(Math.floor(${v}.totalTime / (${rs}.totalTime * 1e6) * 10000) / 100).toFixed(2)` :
+            `(Math.floor(${v}.totalTime / ${rs}.totalTime * 10000) / 100).toFixed(2)`,
+        'expr': (v, rs, t) => t === 'path' ? `${v}.totalTime * 1e6 / ${rs}.totalTime` : `${v}.totalTime / ${rs}.totalTime`,
+    },
+    'avg-call': {
+        'name': 'Avg Calls',
+        'width': 12,
+        'allow': ['path'],
+        'outExpr': (v) => `${v}.avgCalledTimes.toFixed(2)`,
+        'expr': (v) => `${v}.avgCalledTimes.toFixed(2)`,
+    },
+    'max-call': {
+        'name': 'Max Calls',
+        'width': 12,
+        'allow': ['path'],
+        'outExpr': (v) => `${v}.maxCalledTimes`,
+        'expr': (v) => `${v}.maxCalledTimes`,
+    },
+    'min-call': {
+        'name': 'Min Calls',
+        'width': 12,
+        'allow': ['path'],
+        'outExpr': (v) => `${v}.minCalledTimes`,
+        'expr': (v) => `${v}.minCalledTimes`,
+    },
+    'avg-time': {
+        'name': 'Avg Time',
+        'width': 14,
+        'allow': ['path', 'request'],
+        'outExpr': (v, rs, t) => t === 'path' ? `${v}.avgTime.toFixed(2)` :  `(${v}.avgTime * 1e6).toFixed(2)`,
+        'expr': (v) => `${v}.avgTime.toFixed(2)`,
+    },
+    'max-time': {
+        'name': 'Max Time',
+        'width': 14,
+        'allow': ['path', 'request'],
+        'outExpr': (v, rs, t) => t === 'path' ? `${v}.maxTime.toFixed(2)` :  `(${v}.maxTime * 1e6).toFixed(2)`,
+        'expr': (v) => `${v}.maxTime.toFixed(2)`,
+    },
+    'min-time': {
+        'name': 'Min Time',
+        'width': 14,
+        'allow': ['path', 'request'],
+        'outExpr': (v, rs, t) => t === 'path' ? `${v}.minTime.toFixed(2)` :  `(${v}.minTime * 1e6).toFixed(2)`,
+        'expr': (v) => `${v}.minTime.toFixed(2)`,
+    },
+    'call-coverage': {
+        'name': 'Coverage',
+        'width': 10,
+        'allow': ['path'],
+        'outExpr': (v) => `${v}.requestCoverage`,
+        'expr': (v) => `${v}.requestCoverage`,
+    },
+    'called-requests': {
+
+        'name': 'Requests',
+        'width': 10,
+        'allow': ['path'],
+        'outExpr': (v) => `${v}.requests`,
+        'expr': (v) => `${v}.requests`,
+    },
+    'path': {
+        'name': 'Path',
+        'width': 10,
+        'nonSortable': false,
+        'allow': ['path', 'request'],
+        'outExpr': (v) => `${v}.path`,
+        'expr': (v) => `${v}.path`,
+    }
+};
+
+const DEFAULT_COLUMNS = 'index,count,count%,time,time%,path';
+const DEFAULT_SORT_COLUMNS = 'count,time';
+
+const BUILT_IN_PATH_LIST_COLS = 'index,count,count%,avg-call,max-call,min-call,time,time%,avg-time,max-time,min-time,call-coverage,called-requests,path';
+const BUILT_IN_REQ_LIST_COLS = 'index,count,count%,time,time%,avg-time,max-time,min-time,path';
+
+interface ICustomListOptions {
+
+    type: 'path' | 'request';
+
+    name: string;
+
+    rows: number;
+
+    sort: string;
+
+    columns: string;
+}
+
+const isCustomOptions = TyG.createInlineCompiler().compile<ICustomListOptions>({
+    rule: ['$.string', {
+        'type': ['==path', '==request'],
+        'name?': 'string',
+        'rows?': 'uint',
+        'sort?': 'string',
+        'columns?': 'string',
+    }]
+});
 
 class CLI {
+
+    private _version: string;
+
+    public constructor() {
+
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        this._version = require('../package.json').version;
+    }
 
     private _processClap(args: string[]): $CLAP.IResult | false {
 
@@ -63,7 +220,7 @@ class CLI {
         }).addOption({
             name: 'top-called-request-list',
             description: 'Display the most frequently called request list.',
-            arguments: 0,
+            arguments: 0
         }).addOption({
             name: 'top-time-request-list',
             description: 'Display the longest time called request list.',
@@ -73,8 +230,12 @@ class CLI {
             description: 'Display the longest average time called request list.',
             arguments: 0,
         }).addOption({
+            name: 'list',
+            description: 'Customize the list, see details on https://github.com/fenying/xhprof-analyzer.js/blob/master/README.md.',
+            arguments: -1,
+        }).addOption({
             name: 'all-list',
-            description: 'Display all list.',
+            description: 'Display all the built-in list.',
             arguments: 0,
         });
 
@@ -84,7 +245,7 @@ class CLI {
 
             if (result.help) {
 
-                console.log('XHProf Analyzer v0.1.0');
+                console.log(`XHProf Analyzer v${this._version}`);
                 console.log('');
                 console.log(parser.generateHelp('xhprof-analyze', result.help).join('\n'));
                 return false;
@@ -94,7 +255,7 @@ class CLI {
         }
         catch {
 
-            console.log('XHProf Analyzer v0.1.0');
+            console.log(`XHProf Analyzer v${this._version}`);
             console.log('');
             console.log(parser.generateHelp('xhprof-analyze', '').join('\n'));
             return false;
@@ -110,6 +271,83 @@ class CLI {
             return;
         }
 
+        const rows = parseInt(clap.options['max-rows']?.[0] ?? '100');
+
+        const fns: IListFunction[] =[];
+
+        if (clap.flags['all-list'] || clap.flags['top-call-path-list']) {
+
+            fns.push(this._listTopCalledPath(rows));
+        }
+
+        if (clap.flags['all-list'] || clap.flags['top-avg-time-path-list']) {
+
+            fns.push(this._listTopAvgTimePath(rows));
+        }
+
+        if (clap.flags['all-list'] || clap.flags['top-time-path-list']) {
+
+            fns.push(this._listTopTimePath(rows));
+        }
+
+        if (clap.flags['all-list'] || clap.flags['top-referred-path-list']) {
+
+            fns.push(this._listTopReferredPath(rows));
+        }
+
+        if (clap.flags['all-list'] || clap.flags['top-call-request-list']) {
+
+            fns.push(this._listTopCalledRequest(rows));
+        }
+
+        if (clap.flags['all-list'] || clap.flags['top-avg-time-request-list']) {
+
+            fns.push(this._listTopAvgTimeRequest(rows));
+        }
+
+        if (clap.flags['all-list'] || clap.flags['top-time-request-list']) {
+
+            fns.push(this._listTopTimeRequest(rows));
+        }
+
+        if (clap.options['list']) {
+
+            let listNo = 0;
+            for (const item of clap.options['list']) {
+
+                const vars = item.split(';').map((v) => {
+                    const [ name, value ] = v.trim().split('=');
+
+                    return { name, value };
+                });
+
+                const opts: ICustomListOptions = {
+                    type: vars.find((v) => v.name === 'type')?.value as any,
+                    name: vars.find((v) => v.name === 'name')?.value ?? `Custom List #${listNo++}`,
+                    columns: vars.find((v) => v.name === 'columns')?.value ?? DEFAULT_COLUMNS,
+                    sort: vars.find((v) => v.name === 'sort')?.value ?? DEFAULT_SORT_COLUMNS,
+                    rows: parseInt(
+                        vars.find((v) => v.name === 'rows')?.value ?? '100'
+                    ),
+                };
+
+                if (!isCustomOptions(opts)) {
+
+                    console.warn(`Invalid list: --list "${item}"`);
+                }
+
+                const fn = this._createListFn(opts);
+
+                if (fn instanceof Error) {
+
+                    console.warn(`Skipped custom list "${opts.name}": ${fn.message}`);
+                    continue;
+                }
+
+                fns.push(fn);
+            }
+        }
+
         const result = (function(): C.IAnalyzeResult {
 
             const analyzer = new XHProfAnalyzer();
@@ -122,226 +360,205 @@ class CLI {
             return analyzer.analyze();
         })();
 
-        const rows = parseInt(clap.options['max-rows']?.[0] ?? '100');
+        for (let fn of fns) {
 
-        if (clap.flags['all-list'] || clap.flags['top-call-path-list']) {
-
-            this._listTopCalledPath(result, rows);
+            fn(result);
         }
 
-        if (clap.flags['all-list'] || clap.flags['top-avg-time-path-list']) {
-
-            this._listTopAvgTimePath(result, rows);
-        }
-
-        if (clap.flags['all-list'] || clap.flags['top-time-path-list']) {
-
-            this._listTopTimePath(result, rows);
-        }
-
-        if (clap.flags['all-list'] || clap.flags['top-referred-path-list']) {
-
-            this._listTopReferredPath(result, rows);
-        }
-
-        if (clap.flags['all-list'] || clap.flags['top-call-request-list']) {
-
-            this._listTopCalledRequest(result, rows);
-        }
-
-        if (clap.flags['all-list'] || clap.flags['top-avg-time-request-list']) {
-
-            this._listTopAvgTimeRequest(result, rows);
-        }
-
-        if (clap.flags['all-list'] || clap.flags['top-time-request-list']) {
-
-            this._listTopTimeRequest(result, rows);
-        }
-
-        console.log(`Total Execution Time: ${(result.totalTime * 1000000).toFixed(3)}μs`);
+        console.log(`Total Execution Time: ${(result.totalTime * 1e6).toFixed(3)}μs`);
         console.log(`Total Function Calls: ${result.totalCalls}`);
+        console.log(`Total Functions: ${result.calls.length}`);
         console.log(`Total Request Calls: ${result.totalRequests}`);
+        console.log(`Total Request Entries: ${result.requests.length}`);
     }
 
-    protected _listTopCalledPath(rs: C.IAnalyzeResult, rows: number): void {
+    protected _createListFn(opts: ICustomListOptions): IListFunction | Error {
 
-        this._printPathListHeader(`top ${rows} most frequently called paths`);
+        const columns = opts.columns.split(',').map((v) => v.trim());
 
-        this._printCallList(
-            rs.calls.sort((a, b) => (b.calledTimes - a.calledTimes) || (b.wallTime - a.wallTime)),
-            rs,
-            rows
-        );
-    }
+        const sorts = opts.sort.split(',').map((v) => v.trim());
 
-    protected _listTopAvgTimePath(rs: C.IAnalyzeResult, rows: number): void {
+        const fn: string[] = [
+            'return function(rs) {',
+            'let i = 1;',
+            `console.log(">", ${JSON.stringify(opts.name)});`
+        ];
 
-        this._printPathListHeader(`top ${rows} longest average time paths`);
+        const outCols: IColumnConfig[] = [];
+        const sortCols: IColumnConfig[] = [];
 
-        this._printCallList(
-            rs.calls.sort((a, b) => b.wallTime / b.calledTimes - a.wallTime / a.calledTimes),
-            rs,
-            rows
-        );
-    }
+        for (const c of columns) {
 
-    protected _listTopTimePath(rs: C.IAnalyzeResult, rows: number): void {
+            const col = COLUMN_INFO[c as keyof TColumnApply<any>];
 
-        this._printPathListHeader(`top ${rows} longest time paths`);
+            if (!col) {
 
-        this._printCallList(
-            rs.calls.sort((a, b) => b.wallTime - a.wallTime),
-            rs,
-            rows
-        );
-    }
+                console.warn(`Unknown column '${c}'.`);
+                continue;
+            }
 
-    protected _listTopReferredPath(rs: C.IAnalyzeResult, rows: number): void {
+            if (!col.allow.includes(opts.type)) {
 
-        this._printPathListHeader(`top ${rows} most requests referred paths`);
+                console.warn(`Column '${c}' does not work for type '${opts.type}'.`);
+                continue;
+            }
 
-        this._printCallList(
-            rs.calls.sort((a, b) => (b.requestCoverage - a.requestCoverage) || (b.calledTimes - a.calledTimes) || (b.wallTime - a.wallTime)),
-            rs,
-            rows
-        );
-    }
-
-    protected _listTopCalledRequest(rs: C.IAnalyzeResult, rows: number): void {
-
-        this._printRequestListHeader(`top ${rows} most frequently called requests`);
-
-        this._printRequestList(
-            rs.requests.sort((a, b) => (b.count - a.count) || (b.totalTime - a.totalTime)),
-            rs,
-            rows
-        );
-    }
-
-    protected _listTopAvgTimeRequest(rs: C.IAnalyzeResult, rows: number): void {
-
-        this._printRequestListHeader(`top ${rows} longest average time requests`);
-
-        this._printRequestList(
-            rs.requests.sort((a, b) => a.avgTime > b.avgTime ? -1 : 1),
-            rs,
-            rows
-        );
-    }
-
-    protected _listTopTimeRequest(rs: C.IAnalyzeResult, rows: number): void {
-
-        this._printRequestListHeader(`top ${rows} longest time requests`);
-
-        this._printRequestList(
-            rs.requests.sort((a, b) => b.totalTime - a.totalTime),
-            rs,
-            rows
-        );
-    }
-
-    protected _printCallList(items: C.IAnalyzeResultCallItem[], rs: C.IAnalyzeResult, rows: number): void {
-
-        let i = 1;
-
-        for (const r of items.slice(0, rows)) {
-
-            console.log(`${
-                this._column(INDEX_WIDTH, i++)
-            }${
-                this._column(COUNT_WIDTH, r.calledTimes)
-            }${
-                this._column(COUNT_PERCENT_WIDTH, Math.floor(r.calledTimes / rs.totalCalls * 10000) / 100)
-            }${
-                this._column(TIME_WIDTH, r.wallTime)
-            }${
-                this._column(TIME_PERCENT_WIDTH, Math.floor(r.wallTime / (rs.totalTime * 1000000) * 10000) / 100)
-            }${
-                this._column(AVG_TIME_WIDTH, Math.floor(r.wallTime / r.calledTimes * 100) / 100)
-            }${
-                this._column(P_REQUESTS_WIDTH, r.requestCoverage)
-            }${
-                r.path
-            }`);
+            outCols.push(col);
         }
-    }
 
-    protected _printRequestList(items: C.IAnalyzeResultRequestItem[], rs: C.IAnalyzeResult, rows: number): void {
+        for (const c of sorts) {
 
-        let i = 1;
+            const col = COLUMN_INFO[c as keyof TColumnApply<any>];
 
-        for (const r of items.slice(0, rows)) {
+            if (!col) {
 
-            console.log(`${
-                this._column(INDEX_WIDTH, i++)
-            }${
-                this._column(COUNT_WIDTH, r.count)
-            }${
-                this._column(COUNT_PERCENT_WIDTH, Math.floor(r.count / rs.totalRequests * 10000) / 100)
-            }${
-                this._column(TIME_WIDTH, Math.floor(r.totalTime * 100000000) / 100)
-            }${
-                this._column(TIME_PERCENT_WIDTH, Math.floor(r.totalTime / rs.totalTime * 10000) / 100)
-            }${
-                this._column(AVG_TIME_WIDTH, Math.floor(r.avgTime * 100000000) / 100)
-            }${
-                this._column(R_MAX_TIME_WIDTH, Math.floor(r.maxTime * 100000000) / 100)
-            }${
-                this._column(R_MIN_TIME_WIDTH, Math.floor(r.minTime * 100000000) / 100)
-            }${
-                r.path
-            }`);
+                console.warn(`Unknown column '${c}'.`);
+                continue;
+            }
+
+            if (!col.allow.includes(opts.type)) {
+
+                console.warn(`Column '${c}' does not work for type '${opts.type}'.`);
+                continue;
+            }
+
+            if (col.nonSortable) {
+
+                console.warn(`Column '${c}' is not sortable.`);
+                continue;
+            }
+
+            sortCols.push(col);
         }
+
+        outCols.push(...Array.from(new Set(outCols.splice(0))));
+        sortCols.push(...Array.from(new Set(sortCols.splice(0))));
+
+        const lHeaders: string[] = [];
+
+        const lRows: string[] = [];
+
+        const lSort: string[] = [];
+
+        const rowVar = 'v';
+        const resultVar = 'rs';
+
+        for (const c of outCols) {
+
+            lHeaders.push(c.name.padEnd(c.width));
+
+            lRows.push(`\${(${c.outExpr(rowVar, resultVar, opts.type)}).toString().padEnd(${c.width})}`);
+        }
+
+        for (const c of sortCols) {
+
+            lSort.push(`(${c.expr('b', resultVar, opts.type)} - ${c.expr('a', resultVar, opts.type)})`);
+        }
+
+        if (!lSort.length) {
+
+            return new Error('No sort column specified.');
+        }
+
+        fn.push(`console.log(\`${lHeaders.join('')}\`);`);
+
+        if (opts.rows <= 0) {
+
+            opts.rows = Infinity;
+        }
+
+        if (opts.type === 'path') {
+
+            fn.push(`for (const ${rowVar} of ${resultVar}.calls.sort((a, b) => ${lSort.join(' || ')}).slice(0, ${opts.rows})) {`);
+        }
+        else {
+
+            fn.push(`for (const ${rowVar} of ${resultVar}.requests.sort((a, b) => ${lSort.join(' || ')}).slice(0, ${opts.rows})) {`);
+        }
+
+        fn.push(`console.log(\`${lRows.join('')}\`);`);
+
+        fn.push('}');
+        fn.push('}');
+
+        return (new Function(fn.join('\n')))();
     }
 
-    protected _printPathListHeader(title: string): void {
+    protected _listTopCalledPath(rows: number): IListFunction {
 
-        console.log(`\n> List of ${title}\n`);
-
-        console.log(`${
-            this._column(INDEX_WIDTH, '#')
-        }${
-            this._column(COUNT_WIDTH, 'Count')
-        }${
-            this._column(COUNT_PERCENT_WIDTH, 'Count%')
-        }${
-            this._column(TIME_WIDTH, 'Time')
-        }${
-            this._column(TIME_PERCENT_WIDTH, 'Time%')
-        }${
-            this._column(AVG_TIME_WIDTH, 'Avg Time')
-        }${
-            this._column(P_REQUESTS_WIDTH, 'Requests')
-        }Path`);
+        return this._createListFn({
+            type: 'path',
+            name: `List of top ${rows} most frequently called paths`,
+            columns: BUILT_IN_PATH_LIST_COLS,
+            sort: 'count,time',
+            rows
+        }) as IListFunction;
     }
 
-    protected _printRequestListHeader(title: string): void {
+    protected _listTopAvgTimePath(rows: number): IListFunction {
 
-        console.log(`\n> List of ${title}\n`);
-
-        console.log(`${
-            this._column(INDEX_WIDTH, '#')
-        }${
-            this._column(COUNT_WIDTH, 'Count')
-        }${
-            this._column(COUNT_PERCENT_WIDTH, 'Count%')
-        }${
-            this._column(TIME_WIDTH, 'Time')
-        }${
-            this._column(TIME_PERCENT_WIDTH, 'Time%')
-        }${
-            this._column(AVG_TIME_WIDTH, 'Avg Time')
-        }${
-            this._column(R_MAX_TIME_WIDTH, 'Max Time')
-        }${
-            this._column(R_MIN_TIME_WIDTH, 'Min Time')
-        }Path`);
+        return this._createListFn({
+            type: 'path',
+            name: `List of top ${rows} longest average time paths`,
+            columns: BUILT_IN_PATH_LIST_COLS,
+            sort: 'avg-time',
+            rows
+        }) as IListFunction;
     }
 
-    protected _column(width: number, value: number | string): string {
+    protected _listTopTimePath(rows: number): IListFunction {
 
-        return value.toString().padEnd(width, ' ');
+        return this._createListFn({
+            type: 'path',
+            name: `List of top ${rows} longest time paths`,
+            columns: BUILT_IN_PATH_LIST_COLS,
+            sort: 'time',
+            rows
+        }) as IListFunction;
+    }
+
+    protected _listTopReferredPath(rows: number): IListFunction {
+
+        return this._createListFn({
+            type: 'path',
+            name: `List of top ${rows} most requests referred paths`,
+            columns: BUILT_IN_PATH_LIST_COLS,
+            sort: 'called-requests,count,time',
+            rows
+        }) as IListFunction;
+    }
+
+    protected _listTopCalledRequest(rows: number): IListFunction {
+
+        return this._createListFn({
+            type: 'request',
+            name: `List of top ${rows} most frequently called requests`,
+            columns: BUILT_IN_REQ_LIST_COLS,
+            sort: 'count,time',
+            rows
+        }) as IListFunction;
+    }
+
+    protected _listTopAvgTimeRequest(rows: number): IListFunction {
+
+        return this._createListFn({
+            type: 'request',
+            name: `List of top ${rows} longest average time requests`,
+            columns: BUILT_IN_REQ_LIST_COLS,
+            sort: 'avg-time',
+            rows
+        }) as IListFunction;
+    }
+
+    protected _listTopTimeRequest(rows: number): IListFunction {
+
+        return this._createListFn({
+            type: 'request',
+            name: `List of top ${rows} longest time requests`,
+            columns: BUILT_IN_REQ_LIST_COLS,
+            sort: 'time',
+            rows
+        }) as IListFunction;
     }
 }
 

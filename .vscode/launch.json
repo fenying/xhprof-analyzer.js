@@ -16,7 +16,8 @@
                 "${workspaceFolder}/examples/*.js"
             ],
             "args": [
-                "--top-time-request-list",
+                "--list",
+                "type=path;name=Hello world;columns=index,count,count%,time,time%,path;sort=count,time;rows=200",
                 "tests/php-profile.log"
             ]
         }

@@ -34,11 +34,25 @@ export interface IAnalyzeResultCallItem {
 
     path: string;
 
-    wallTime: number;
+    totalTime: number;
 
-    calledTimes: number;
+    maxTime: number;
+
+    minTime: number;
+
+    avgTime: number;
+
+    totalCalledTimes: number;
+
+    maxCalledTimes: number;
+
+    minCalledTimes: number;
+
+    avgCalledTimes: number;
 
     requestCoverage: number;
+
+    requests: number;
 }
 
 export interface IAnalyzeResultRequestItem {

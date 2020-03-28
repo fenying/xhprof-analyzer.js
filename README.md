@@ -46,6 +46,38 @@ xhprof-analyze --top-avg-time-path-list /var/log/php-profile.log
 
 > For more details list, see `xhprof-analyze --help`.
 
+## Custom List
+
+Use following command:
+
+```sh
+xhprof-analyze --list "type:<LIST-TYPE>;name:<LIST-TITLE>;columns:<COLUMNS>;sort:<SORT-BY>;rows:<MAX-ROWS>' <FILE-NAME>
+```
+
+For each variables,
+
+- `<LIST-TYPE>` is the type of list, only following type is supported:
+    - `path`
+    - `request`
+- `<LIST-TITLE>` **Optional**. is the displayed title of list. (don't include `";"`). Default: `Custom List #N`
+- `<COLUMNS>` **Optional**. is the columns to be displayed in the list, could be combination of following items:
+    - `index` The line No. of row in the list.
+    - `count` The requested/called count of requests/paths.
+    - `count%` The percentage of `count` in all requests.
+    - `time` The average time of path calling or requesting.
+    - `time%` The percentage of `time` in all requests.
+    - `avg-time` The average time of path calling or requesting.
+    - `avg-call` The average calls of the path in each request involved the path.
+    - `max-time` The maximum time of the path in all requests involved the path.
+    - `min-time` The minimum time of the path in all requests involved the path.
+    - `max-call` The maximum calls of the path in all requests involved the path.
+    - `min-call` The minimum calls of the path in all requests involved the path.
+    - `call-coverage` How many kinds of requests involved the call.
+    - `called-requests` How many requests involved the call.
+    - `path` The called path or request path.
+- `<SORT-BY>` **Optional**. The sorting columns, could be combination of any columns in `<COLUMNS>` excepting `index` and `path`. Default: `time`.
+- `<MAX-ROWS>` **Optional**. The maximum rows of list output. Default: 100.
+
 ## Requirements
 
 - Node.js v8.x (Or newer)

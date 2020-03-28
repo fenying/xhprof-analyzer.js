@@ -229,9 +229,16 @@ export class XHProfAnalyzer implements C.IAnalyzer {
                     calls[k] = call = {
 
                         'path': k,
+                        'requests': 1,
                         'requestCoverage': 1,
-                        'calledTimes': rawCall.ct,
-                        'wallTime': rawCall.wt,
+                        'totalCalledTimes': rawCall.ct,
+                        'maxCalledTimes': rawCall.ct,
+                        'minCalledTimes': rawCall.ct,
+                        'avgCalledTimes': rawCall.ct,
+                        'totalTime': rawCall.wt,
+                        'maxTime': rawCall.wt,
+                        'minTime': rawCall.wt,
+                        'avgTime': rawCall.wt,
                     };
 
                     result.calls.push(call);
@@ -243,8 +250,32 @@ export class XHProfAnalyzer implements C.IAnalyzer {
                         call.requestCoverage++;
                     }
 
-                    call.calledTimes += rawCall.ct;
-                    call.wallTime += rawCall.wt;
+                    call.requests++;
+                    call.totalCalledTimes += rawCall.ct;
+                    call.totalTime += rawCall.wt;
+
+                    call.avgCalledTimes = call.totalCalledTimes / call.requests;
+                    call.avgTime = call.totalTime / call.requests;
+
+                    if (call.maxCalledTimes < rawCall.ct) {
+
+                        call.maxCalledTimes = rawCall.ct;
+                    }
+
+                    if (call.minCalledTimes > rawCall.ct) {
+
+                        call.minCalledTimes = rawCall.ct;
+                    }
+
+                    if (call.maxTime < rawCall.wt) {
+
+                        call.maxTime = rawCall.wt;
+                    }
+
+                    if (call.minTime > rawCall.wt) {
+
+                        call.minTime = rawCall.wt;
+                    }
                 }
 
                 result.totalCalls += rawCall.ct;
